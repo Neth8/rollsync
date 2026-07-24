@@ -1,3 +1,5 @@
+/// <reference types="web-bluetooth" />
+
 export type PrinterLanguage = 'tspl' | 'zpl';
 export type PrinterConnection = 'usb' | 'bluetooth' | 'wifi' | 'windows';
 
@@ -31,6 +33,10 @@ export type DiscoveredWifiPrinter = {
   port?: number;
 };
 
+type BluetoothNavigator = Navigator & {
+  bluetooth?: Bluetooth;
+};
+
 const STORAGE_KEY = 'rollsync_printer_settings';
 
 export const defaultPrinterSettings: PrinterSettings = {
@@ -49,10 +55,19 @@ export const defaultPrinterSettings: PrinterSettings = {
   bluetoothId: '',
 };
 
+function canUseBrowserStorage() {
+  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
 export function loadPrinterSettings(): PrinterSettings {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!canUseBrowserStorage()) {
+      return defaultPrinterSettings;
+    }
+
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultPrinterSettings;
+
     const parsed = JSON.parse(raw) as Partial<PrinterSettings>;
     return { ...defaultPrinterSettings, ...parsed };
   } catch {
@@ -61,7 +76,8 @@ export function loadPrinterSettings(): PrinterSettings {
 }
 
 export function savePrinterSettings(settings: PrinterSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  if (!canUseBrowserStorage()) return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
 function esc(value: string) {
@@ -74,11 +90,11 @@ export function buildTsplLabel(settings: PrinterSettings, payload: LabelPayload)
 
   const lines = [
     `SIZE ${widthInch},${heightInch}`,
-    `GAP 2 mm,0 mm`,
-    `DIRECTION 1`,
+    'GAP 2 mm,0 mm',
+    'DIRECTION 1',
     `DENSITY ${settings.darkness || '8'}`,
     `SPEED ${settings.speed || '4'}`,
-    `CLS`,
+    'CLS',
     `TEXT 20,20,"3",0,1,1,"${esc(payload.title)}"`,
   ];
 
@@ -110,22 +126,22 @@ export function buildZplLabel(settings: PrinterSettings, payload: LabelPayload) 
     `^PW${widthDots}`,
     `^LL${heightDots}`,
     '^CI28',
-    '^FO20,20^A0N,32,32^FD' + esc(payload.title) + '^FS',
+    `^FO20,20^A0N,32,32^FD${esc(payload.title)}^FS`,
   ];
 
   if (payload.subtitle) {
-    parts.push('^FO20,60^A0N,24,24^FD' + esc(payload.subtitle) + '^FS');
+    parts.push(`^FO20,60^A0N,24,24^FD${esc(payload.subtitle)}^FS`);
   }
 
   parts.push('^BY2,2,60');
-  parts.push('^FO20,95^BCN,60,Y,N,N^FD' + esc(payload.barcode) + '^FS');
+  parts.push(`^FO20,95^BCN,60,Y,N,N^FD${esc(payload.barcode)}^FS`);
 
   if (payload.qr) {
-    parts.push('^FO300,20^BQN,2,5^FDQA,' + esc(payload.qr) + '^FS');
+    parts.push(`^FO300,20^BQN,2,5^FDQA,${esc(payload.qr)}^FS`);
   }
 
   if (payload.footer) {
-    parts.push('^FO20,175^A0N,22,22^FD' + esc(payload.footer) + '^FS');
+    parts.push(`^FO20,175^A0N,22,22^FD${esc(payload.footer)}^FS`);
   }
 
   parts.push(`^PQ${Math.max(1, settings.copies || 1)},0,1,N`);
@@ -141,11 +157,17 @@ export function buildLabelCommand(settings: PrinterSettings, payload: LabelPaylo
 }
 
 export async function searchBluetoothPrinter() {
-  if (!('bluetooth' in navigator)) {
+  if (typeof navigator === 'undefined') {
+    throw new Error('Bluetooth search is only available in the browser.');
+  }
+
+  const nav = navigator as BluetoothNavigator;
+
+  if (!nav.bluetooth) {
     throw new Error('Bluetooth is not supported in this browser.');
   }
 
-  const device = await navigator.bluetooth.requestDevice({
+  const device = await nav.bluetooth.requestDevice({
     acceptAllDevices: true,
     optionalServices: [],
   });
@@ -165,8 +187,21 @@ export async function searchWifiPrinters(): Promise<DiscoveredWifiPrinter[]> {
     throw new Error('Printer discovery helper is not running.');
   }
 
-  const data = (await response.json()) as DiscoveredWifiPrinter[];
-  return Array.isArray(data) ? data : [];
+  const data: unknown = await response.json();
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.filter(
+    (item): item is DiscoveredWifiPrinter =>
+      typeof item === 'object' &&
+      item !== null &&
+      'name' in item &&
+      'host' in item &&
+      typeof (item as DiscoveredWifiPrinter).name === 'string' &&
+      typeof (item as DiscoveredWifiPrinter).host === 'string',
+  );
 }
 
 export async function printLabel(settings: PrinterSettings, payload: LabelPayload) {
@@ -212,7 +247,7 @@ export async function printLabel(settings: PrinterSettings, payload: LabelPayloa
 export async function testPrint(settings: PrinterSettings) {
   return printLabel(settings, {
     title: 'RollSync Test',
-    subtitle: settings.language.toUpperCase() + ' label',
+    subtitle: `${settings.language.toUpperCase()} label`,
     barcode: 'RS-TEST-001',
     qr: 'RS-TEST-001',
     footer: 'Printer connection successful',
