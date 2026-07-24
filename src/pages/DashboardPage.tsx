@@ -1,5 +1,3 @@
-import { useAuth } from '../contexts/AuthContext';
-
 export function DashboardPage() {
   return (
     <section className="dashboard-page">

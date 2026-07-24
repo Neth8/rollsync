@@ -33,13 +33,12 @@ export function AppLayout() {
     user?.user_metadata?.username ||
     'RollSync User';
 
-  const initials = fullName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
-
+const initials = fullName
+  .split(' ')
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part: string) => part[0]?.toUpperCase())
+  .join('');
   useEffect(() => {
     setSidebarOpen(false);
     setProfileOpen(false);
