@@ -1677,3 +1677,15 @@ a:focus-visible {
     animation: none !important;
   }
 }
+.settings-help-text {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.printer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}

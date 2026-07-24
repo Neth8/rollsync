@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createDropdownOption, getDropdownOptions, type DropdownOption } from '../services/lowStock';
+import { PrinterSettingsPanel } from '../components/PrinterSettingsPanel';
 
 type SettingKey = 'names' | 'types' | 'ups' | 'pcs';
 
@@ -35,8 +36,8 @@ export function LowStockSettingsPage() {
     }
   }
 
-  async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleAdd(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!value.trim()) return;
 
     try {
@@ -54,7 +55,7 @@ export function LowStockSettingsPage() {
 
   return (
     <section className="dashboard-page">
-      <div className="dashboard-hero">
+      <div className="dashboard-hero dashboard-hero-single">
         <div>
           <span className="eyebrow">Settings</span>
           <h1>Manage low stock dropdown values.</h1>
@@ -63,27 +64,29 @@ export function LowStockSettingsPage() {
       </div>
 
       <div className="low-stock-settings-layout">
-        <div className="settings-tab-list">
-          {(Object.keys(labels) as SettingKey[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={activeKey === key ? 'tab-button active' : 'tab-button'}
-              onClick={() => setActiveKey(key)}
-            >
-              {labels[key]}
-            </button>
-          ))}
-        </div>
-
         <div className="low-stock-form-card">
-          <h3>Add {labels[activeKey]}</h3>
+          <div className="section-heading-row">
+            <h3>Dropdown settings</h3>
+          </div>
+
+          <div className="settings-tab-list">
+            {(Object.keys(labels) as SettingKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={activeKey === key ? 'tab-button active' : 'tab-button'}
+                onClick={() => setActiveKey(key)}
+              >
+                {labels[key]}
+              </button>
+            ))}
+          </div>
 
           <form className="inline-form" onSubmit={handleAdd}>
             <input
               type="text"
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(event) => setValue(event.target.value)}
               placeholder={`Add ${labels[activeKey].toLowerCase()} value`}
             />
             <button className="primary-button" type="submit" disabled={saving || !value.trim()}>
@@ -106,6 +109,10 @@ export function LowStockSettingsPage() {
               ))
             )}
           </div>
+        </div>
+
+        <div className="settings-option-list">
+          <PrinterSettingsPanel />
         </div>
       </div>
     </section>
