@@ -1689,3 +1689,31 @@ a:focus-visible {
   margin-top: 16px;
   flex-wrap: wrap;
 }
+.printer-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+
+.printer-discovery-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.printer-discovery-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.printer-discovery-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.printer-discovery-item span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

@@ -13,6 +13,8 @@ export type PrinterSettings = {
   darkness: string;
   speed: string;
   copies: number;
+  bluetoothName: string;
+  bluetoothId: string;
 };
 
 export type LabelPayload = {
@@ -21,6 +23,12 @@ export type LabelPayload = {
   barcode: string;
   qr?: string;
   footer?: string;
+};
+
+export type DiscoveredWifiPrinter = {
+  name: string;
+  host: string;
+  port?: number;
 };
 
 const STORAGE_KEY = 'rollsync_printer_settings';
@@ -37,6 +45,8 @@ export const defaultPrinterSettings: PrinterSettings = {
   darkness: '8',
   speed: '4',
   copies: 1,
+  bluetoothName: '',
+  bluetoothId: '',
 };
 
 export function loadPrinterSettings(): PrinterSettings {
@@ -130,6 +140,35 @@ export function buildLabelCommand(settings: PrinterSettings, payload: LabelPaylo
     : buildTsplLabel(settings, payload);
 }
 
+export async function searchBluetoothPrinter() {
+  if (!('bluetooth' in navigator)) {
+    throw new Error('Bluetooth is not supported in this browser.');
+  }
+
+  const device = await navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: [],
+  });
+
+  return {
+    id: device.id ?? '',
+    name: device.name ?? 'Bluetooth printer',
+  };
+}
+
+export async function searchWifiPrinters(): Promise<DiscoveredWifiPrinter[]> {
+  const response = await fetch('http://localhost:4319/discover-printers', {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    throw new Error('Printer discovery helper is not running.');
+  }
+
+  const data = (await response.json()) as DiscoveredWifiPrinter[];
+  return Array.isArray(data) ? data : [];
+}
+
 export async function printLabel(settings: PrinterSettings, payload: LabelPayload) {
   const commands = buildLabelCommand(settings, payload);
 
@@ -159,6 +198,8 @@ export async function printLabel(settings: PrinterSettings, payload: LabelPayloa
       printerName: settings.printerName,
       language: settings.language,
       connection: settings.connection,
+      bluetoothName: settings.bluetoothName,
+      bluetoothId: settings.bluetoothId,
       commands,
     }),
   });

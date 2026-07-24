@@ -3,7 +3,10 @@ import {
   defaultPrinterSettings,
   loadPrinterSettings,
   savePrinterSettings,
+  searchBluetoothPrinter,
+  searchWifiPrinters,
   testPrint,
+  type DiscoveredWifiPrinter,
   type PrinterConnection,
   type PrinterLanguage,
   type PrinterSettings,
@@ -13,6 +16,9 @@ export function PrinterSettingsPanel() {
   const [settings, setSettings] = useState<PrinterSettings>(() => loadPrinterSettings());
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [searchingBt, setSearchingBt] = useState(false);
+  const [searchingWifi, setSearchingWifi] = useState(false);
+  const [wifiResults, setWifiResults] = useState<DiscoveredWifiPrinter[]>([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -20,6 +26,9 @@ export function PrinterSettingsPanel() {
     if (!settings.enabled) return true;
     if (settings.connection === 'wifi') {
       return settings.host.trim() && settings.port.trim();
+    }
+    if (settings.connection === 'bluetooth') {
+      return settings.bluetoothName.trim().length > 0;
     }
     return settings.printerName.trim().length > 0 || settings.connection !== 'windows';
   }, [settings]);
@@ -56,8 +65,59 @@ export function PrinterSettingsPanel() {
     }
   }
 
+  async function handleSearchBluetooth() {
+    try {
+      setSearchingBt(true);
+      setError('');
+      setMessage('');
+      const device = await searchBluetoothPrinter();
+      setSettings((prev) => ({
+        ...prev,
+        connection: 'bluetooth',
+        bluetoothName: device.name,
+        bluetoothId: device.id,
+      }));
+      setMessage(`Bluetooth device selected: ${device.name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to search Bluetooth printers.');
+    } finally {
+      setSearchingBt(false);
+    }
+  }
+
+  async function handleSearchWifi() {
+    try {
+      setSearchingWifi(true);
+      setError('');
+      setMessage('');
+      const results = await searchWifiPrinters();
+      setWifiResults(results);
+      if (results.length === 0) {
+        setMessage('No Wi-Fi printers found on the current network.');
+      } else {
+        setMessage(`Found ${results.length} Wi-Fi printer(s).`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to search Wi-Fi printers.');
+    } finally {
+      setSearchingWifi(false);
+    }
+  }
+
+  function handleSelectWifiPrinter(printer: DiscoveredWifiPrinter) {
+    setSettings((prev) => ({
+      ...prev,
+      connection: 'wifi',
+      printerName: printer.name,
+      host: printer.host,
+      port: String(printer.port ?? 9100),
+    }));
+    setMessage(`Selected Wi-Fi printer: ${printer.name}`);
+  }
+
   function handleReset() {
     setSettings(defaultPrinterSettings);
+    setWifiResults([]);
     setError('');
     setMessage('');
   }
@@ -72,6 +132,32 @@ export function PrinterSettingsPanel() {
           </p>
         </div>
       </div>
+
+      <div className="printer-search-actions">
+        <button className="tab-button" type="button" onClick={handleSearchBluetooth} disabled={searchingBt}>
+          {searchingBt ? 'Searching BT...' : 'Search BT printer'}
+        </button>
+
+        <button className="tab-button" type="button" onClick={handleSearchWifi} disabled={searchingWifi}>
+          {searchingWifi ? 'Searching Wi-Fi...' : 'Search Wi-Fi printers'}
+        </button>
+      </div>
+
+      {wifiResults.length > 0 ? (
+        <div className="printer-discovery-list">
+          {wifiResults.map((printer) => (
+            <button
+              key={`${printer.name}-${printer.host}`}
+              type="button"
+              className="settings-option-row printer-discovery-item"
+              onClick={() => handleSelectWifiPrinter(printer)}
+            >
+              <strong>{printer.name}</strong>
+              <span>{printer.host}:{printer.port ?? 9100}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="low-stock-form-grid">
         <label className="checkbox-field">
@@ -129,6 +215,28 @@ export function PrinterSettingsPanel() {
               />
             </label>
           </>
+        ) : settings.connection === 'bluetooth' ? (
+          <>
+            <label>
+              <span>Bluetooth printer name</span>
+              <input
+                type="text"
+                value={settings.bluetoothName}
+                onChange={(event) => update('bluetoothName', event.target.value)}
+                placeholder="Selected Bluetooth device"
+              />
+            </label>
+
+            <label>
+              <span>Bluetooth device id</span>
+              <input
+                type="text"
+                value={settings.bluetoothId}
+                onChange={(event) => update('bluetoothId', event.target.value)}
+                placeholder="Browser device id"
+              />
+            </label>
+          </>
         ) : (
           <label>
             <span>Printer name</span>
@@ -136,7 +244,7 @@ export function PrinterSettingsPanel() {
               type="text"
               value={settings.printerName}
               onChange={(event) => update('printerName', event.target.value)}
-              placeholder="Select or enter installed printer name"
+              placeholder="Enter installed printer name"
             />
           </label>
         )}
