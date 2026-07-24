@@ -1035,3 +1035,11 @@ a {
     width: 100%;
   }
 }
+.low-stock-approved-layout {
+  display: grid;
+}
+
+.priority-badge-approved {
+  background: rgba(76, 175, 80, 0.14);
+  color: #4caf50;
+}

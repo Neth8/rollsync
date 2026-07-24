@@ -10,7 +10,7 @@ import {
 } from '../services/lowStock';
 import { LowStockWorkflowModal } from '../components/LowStockWorkflowModal';
 
-type InnerTab = 'currently-low';
+type InnerTab = 'currently-low' | 'manager-approved';
 
 type FormState = {
   name: string;
@@ -90,6 +90,14 @@ export function LowStockPage() {
     );
   }, [form]);
 
+  const currentlyLowItems = useMemo(() => {
+    return items.filter((item) => item.manager_approval !== 'approved');
+  }, [items]);
+
+  const managerApprovedItems = useMemo(() => {
+    return items.filter((item) => item.manager_approval === 'approved');
+  }, [items]);
+
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSave) return;
@@ -107,6 +115,7 @@ export function LowStockPage() {
 
       setItems((prev) => [created, ...prev]);
       setForm(initialForm);
+      setInnerTab('currently-low');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save item.');
     } finally {
@@ -135,6 +144,10 @@ export function LowStockPage() {
 
       setItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
       setSelectedItem(saved);
+
+      if (saved.manager_approval === 'approved') {
+        setInnerTab('manager-approved');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update Head Office details.');
       throw err;
@@ -142,6 +155,8 @@ export function LowStockPage() {
       setModalSaving(false);
     }
   }
+
+  const visibleItems = innerTab === 'manager-approved' ? managerApprovedItems : currentlyLowItems;
 
   return (
     <section className="dashboard-page">
@@ -156,18 +171,32 @@ export function LowStockPage() {
         </div>
 
         <div className="hero-card">
-          <span>Total low items</span>
-          <strong>{items.length}</strong>
+          <span>
+            {innerTab === 'manager-approved' ? 'Approved items' : 'Total low items'}
+          </span>
+          <strong>{visibleItems.length}</strong>
         </div>
       </div>
 
-      <div className="tab-strip">
+      <div className="tab-strip" role="tablist" aria-label="Low stock status tabs">
         <button
           type="button"
+          role="tab"
+          aria-selected={innerTab === 'currently-low'}
           className={innerTab === 'currently-low' ? 'tab-button active' : 'tab-button'}
           onClick={() => setInnerTab('currently-low')}
         >
           Currently Low
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={innerTab === 'manager-approved'}
+          className={innerTab === 'manager-approved' ? 'tab-button active' : 'tab-button'}
+          onClick={() => setInnerTab('manager-approved')}
+        >
+          Manager Approved
         </button>
       </div>
 
@@ -300,10 +329,10 @@ export function LowStockPage() {
           <div className="low-stock-cards">
             {loading ? (
               <div className="hero-card">Loading low stock items...</div>
-            ) : items.length === 0 ? (
-              <div className="hero-card">No currently low stock items saved yet.</div>
+            ) : currentlyLowItems.length === 0 ? (
+              <div className="hero-card">No currently low stock items waiting for approval.</div>
             ) : (
-              items.map((item) => (
+              currentlyLowItems.map((item) => (
                 <article
                   key={item.id}
                   className={item.is_high_priority ? 'low-stock-card high-priority' : 'low-stock-card'}
@@ -362,7 +391,72 @@ export function LowStockPage() {
             )}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="low-stock-approved-layout">
+          <div className="low-stock-cards">
+            {loading ? (
+              <div className="hero-card">Loading approved items...</div>
+            ) : managerApprovedItems.length === 0 ? (
+              <div className="hero-card">No manager approved items yet.</div>
+            ) : (
+              managerApprovedItems.map((item) => (
+                <article
+                  key={item.id}
+                  className="low-stock-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedItem(item);
+                    }
+                  }}
+                >
+                  <div className="low-stock-card-head">
+                    <h3>{item.name}</h3>
+                    <span className="priority-badge priority-badge-approved">Approved</span>
+                  </div>
+
+                  <div className="low-stock-card-grid">
+                    <div>
+                      <span>#ID</span>
+                      <strong>{item.display_id}</strong>
+                    </div>
+
+                    <div>
+                      <span>Name</span>
+                      <strong>{item.name}</strong>
+                    </div>
+
+                    <div>
+                      <span>Type</span>
+                      <strong>{item.type}</strong>
+                    </div>
+
+                    <div>
+                      <span>Pcs</span>
+                      <strong>{item.pcs}</strong>
+                    </div>
+
+                    <div>
+                      <span>Stock / Order</span>
+                      <strong>
+                        {item.stock} / {item.order}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Added By</span>
+                      <strong>{item.created_by}</strong>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       <LowStockWorkflowModal
         open={Boolean(selectedItem)}
