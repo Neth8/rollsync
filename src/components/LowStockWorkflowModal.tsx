@@ -6,8 +6,8 @@ export type ApprovalStatus = 'approved' | 'pending' | 'rejected';
 export type WorkflowTab = 'head-office' | 'factory-scheduling' | 'factory-production' | 'closing';
 
 export type LowStockWorkflowItem = LowStockItem & {
-  manager_approval?: ApprovalStatus;
-  manager_remarks?: string;
+  manager_approval?: ApprovalStatus | null;
+  manager_remarks?: string | null;
 };
 
 type LowStockWorkflowModalProps = {
