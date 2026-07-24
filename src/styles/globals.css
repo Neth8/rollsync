@@ -515,10 +515,9 @@ a {
 }
 
 .low-stock-card.high-priority {
-  border-color: #ff8a65;
-  box-shadow: 0 20px 60px rgba(255, 138, 101, 0.12);
+  border: 1px solid #ef4444;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
 }
-
 .low-stock-card-head {
   display: flex;
   align-items: center;

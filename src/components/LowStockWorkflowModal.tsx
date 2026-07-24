@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { LowStockItem } from '../services/lowStock';
+import type { DropdownOption, LowStockItem } from '../services/lowStock';
 
 export type ApprovalStatus = 'approved' | 'pending' | 'rejected';
 export type WorkflowTab = 'head-office' | 'factory-scheduling' | 'factory-production' | 'closing';
@@ -14,8 +14,12 @@ type LowStockWorkflowModalProps = {
   item: LowStockWorkflowItem | null;
   open: boolean;
   onClose: () => void;
-  onSaveHeadOffice: (updatedItem: LowStockWorkflowItem) => void;
+  onSaveHeadOffice: (updatedItem: LowStockWorkflowItem) => void | Promise<void>;
   saving?: boolean;
+  nameOptions: DropdownOption[];
+  typeOptions: DropdownOption[];
+  upsOptions: DropdownOption[];
+  pcsOptions: DropdownOption[];
 };
 
 const workflowTabs: Array<{ key: WorkflowTab; label: string }> = [
@@ -31,6 +35,10 @@ export function LowStockWorkflowModal({
   onClose,
   onSaveHeadOffice,
   saving = false,
+  nameOptions,
+  typeOptions,
+  upsOptions,
+  pcsOptions,
 }: LowStockWorkflowModalProps) {
   const [activeTab, setActiveTab] = useState<WorkflowTab>('head-office');
   const [formData, setFormData] = useState<LowStockWorkflowItem | null>(item);
@@ -68,6 +76,8 @@ export function LowStockWorkflowModal({
     return `${formData.name} • ${formData.display_id}`;
   }, [formData]);
 
+  const isLocked = formData?.manager_approval === 'approved';
+
   if (!open || !formData) return null;
 
   const handleChange = <K extends keyof LowStockWorkflowItem>(
@@ -77,10 +87,10 @@ export function LowStockWorkflowModal({
     setFormData((current) => (current ? { ...current, [key]: value } : current));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formData) return;
-    onSaveHeadOffice(formData);
+    await onSaveHeadOffice(formData);
     onClose();
   };
 
@@ -143,44 +153,74 @@ export function LowStockWorkflowModal({
               <div className="workflow-form-grid">
                 <label>
                   <span>Name</span>
-                  <input
+                  <select
                     value={formData.name}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('name', event.target.value)}
-                    placeholder="Item name"
-                  />
+                  >
+                    <option value="">Select name</option>
+                    {nameOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
                   <span>Type</span>
-                  <input
+                  <select
                     value={formData.type}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('type', event.target.value)}
-                    placeholder="Item type"
-                  />
+                  >
+                    <option value="">Select type</option>
+                    {typeOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
                   <span>UPS</span>
-                  <input
+                  <select
                     value={formData.ups}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('ups', event.target.value)}
-                    placeholder="UPS"
-                  />
+                  >
+                    <option value="">Select UPS</option>
+                    {upsOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
                   <span>PCS</span>
-                  <input
+                  <select
                     value={formData.pcs}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('pcs', event.target.value)}
-                    placeholder="PCS"
-                  />
+                  >
+                    <option value="">Select PCS</option>
+                    {pcsOptions.map((option) => (
+                      <option key={option.id} value={option.value}>
+                        {option.value}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
                   <span>Stock</span>
                   <input
+                    type="text"
                     value={formData.stock}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('stock', event.target.value)}
                     placeholder="Current stock"
                   />
@@ -189,7 +229,9 @@ export function LowStockWorkflowModal({
                 <label>
                   <span>Order</span>
                   <input
+                    type="text"
                     value={formData.order}
+                    disabled={isLocked}
                     onChange={(event) => handleChange('order', event.target.value)}
                     placeholder="Required order"
                   />
@@ -199,6 +241,7 @@ export function LowStockWorkflowModal({
                   <span>Priority</span>
                   <select
                     value={formData.is_high_priority ? 'high' : 'normal'}
+                    disabled={isLocked}
                     onChange={(event) =>
                       handleChange('is_high_priority', event.target.value === 'high')
                     }
@@ -230,6 +273,7 @@ export function LowStockWorkflowModal({
                 <span>Remarks</span>
                 <textarea
                   value={formData.remark}
+                  disabled={isLocked}
                   onChange={(event) => handleChange('remark', event.target.value)}
                   placeholder="Item remarks"
                 />
@@ -261,8 +305,8 @@ export function LowStockWorkflowModal({
                   Cancel
                 </button>
                 <button type="submit" className="primary-button" disabled={saving}>
-  {saving ? 'Saving Head Office...' : 'Save Head Office'}
-</button>
+                  {saving ? 'Saving Head Office...' : 'Save Head Office'}
+                </button>
               </div>
             </form>
           ) : (

@@ -8,7 +8,10 @@ import {
   type DropdownOption,
   type LowStockItem,
 } from '../services/lowStock';
-import { LowStockWorkflowModal } from '../components/LowStockWorkflowModal';
+import {
+  LowStockWorkflowModal,
+  type LowStockWorkflowItem,
+} from '../components/LowStockWorkflowModal';
 
 type InnerTab = 'currently-low' | 'manager-approved';
 
@@ -47,8 +50,7 @@ export function LowStockPage() {
   const [types, setTypes] = useState<DropdownOption[]>([]);
   const [upsOptions, setUpsOptions] = useState<DropdownOption[]>([]);
   const [pcsOptions, setPcsOptions] = useState<DropdownOption[]>([]);
-
-  const [selectedItem, setSelectedItem] = useState<LowStockItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<LowStockWorkflowItem | null>(null);
 
   useEffect(() => {
     void loadAll();
@@ -347,11 +349,12 @@ export function LowStockPage() {
                   }}
                 >
                   <div className="low-stock-card-head">
-                    <h3>{item.name}</h3>
-                    {item.is_high_priority ? (
-                      <span className="priority-badge">High Priority</span>
-                    ) : null}
-                  </div>
+  <h3>{item.name}</h3>
+  <div className="low-stock-card-badges">
+    {item.is_high_priority ? <span className="priority-badge">High Priority</span> : null}
+    <span className="priority-badge priority-badge-approved">Approved</span>
+  </div>
+</div>
 
                   <div className="low-stock-card-grid">
                     <div>
@@ -402,7 +405,7 @@ export function LowStockPage() {
               managerApprovedItems.map((item) => (
                 <article
                   key={item.id}
-                  className="low-stock-card"
+                  className={item.is_high_priority ? 'low-stock-card high-priority' : 'low-stock-card'}
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedItem(item)}
@@ -413,10 +416,13 @@ export function LowStockPage() {
                     }
                   }}
                 >
-                  <div className="low-stock-card-head">
-                    <h3>{item.name}</h3>
-                    <span className="priority-badge priority-badge-approved">Approved</span>
-                  </div>
+                    <div className="low-stock-card-head">
+  <h3>{item.name}</h3>
+  <div className="low-stock-card-badges">
+    {item.is_high_priority ? <span className="priority-badge">High Priority</span> : null}
+    <span className="priority-badge priority-badge-approved">Approved</span>
+  </div>
+</div>              
 
                   <div className="low-stock-card-grid">
                     <div>
@@ -457,14 +463,17 @@ export function LowStockPage() {
           </div>
         </div>
       )}
-
       <LowStockWorkflowModal
-        open={Boolean(selectedItem)}
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-        onSaveHeadOffice={handleSaveHeadOffice}
-        saving={modalSaving}
-      />
+  open={Boolean(selectedItem)}
+  item={selectedItem}
+  onClose={() => setSelectedItem(null)}
+  onSaveHeadOffice={handleSaveHeadOffice}
+  saving={modalSaving}
+  nameOptions={names}
+  typeOptions={types}
+  upsOptions={upsOptions}
+  pcsOptions={pcsOptions}
+/>
     </section>
   );
 }
