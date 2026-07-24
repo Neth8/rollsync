@@ -15,6 +15,7 @@ type LowStockWorkflowModalProps = {
   open: boolean;
   onClose: () => void;
   onSaveHeadOffice: (updatedItem: LowStockWorkflowItem) => void;
+  saving?: boolean;
 };
 
 const workflowTabs: Array<{ key: WorkflowTab; label: string }> = [
@@ -29,6 +30,7 @@ export function LowStockWorkflowModal({
   open,
   onClose,
   onSaveHeadOffice,
+  saving = false,
 }: LowStockWorkflowModalProps) {
   const [activeTab, setActiveTab] = useState<WorkflowTab>('head-office');
   const [formData, setFormData] = useState<LowStockWorkflowItem | null>(item);
@@ -258,9 +260,9 @@ export function LowStockWorkflowModal({
                 <button type="button" className="tab-button" onClick={onClose}>
                   Cancel
                 </button>
-                <button type="submit" className="primary-button">
-                  Save Head Office
-                </button>
+                <button type="submit" className="primary-button" disabled={saving}>
+  {saving ? 'Saving Head Office...' : 'Save Head Office'}
+</button>
               </div>
             </form>
           ) : (
