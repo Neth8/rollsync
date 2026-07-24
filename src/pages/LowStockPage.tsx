@@ -4,9 +4,11 @@ import {
   createLowStockItem,
   getDropdownOptions,
   getLowStockItems,
+  updateLowStockHeadOffice,
   type DropdownOption,
   type LowStockItem,
 } from '../services/lowStock';
+import { LowStockWorkflowModal } from '../components/LowStockWorkflowModal';
 
 type InnerTab = 'currently-low';
 
@@ -37,6 +39,7 @@ export function LowStockPage() {
   const [items, setItems] = useState<LowStockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [modalSaving, setModalSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormState>(initialForm);
 
@@ -44,6 +47,8 @@ export function LowStockPage() {
   const [types, setTypes] = useState<DropdownOption[]>([]);
   const [upsOptions, setUpsOptions] = useState<DropdownOption[]>([]);
   const [pcsOptions, setPcsOptions] = useState<DropdownOption[]>([]);
+
+  const [selectedItem, setSelectedItem] = useState<LowStockItem | null>(null);
 
   useEffect(() => {
     void loadAll();
@@ -85,8 +90,8 @@ export function LowStockPage() {
     );
   }, [form]);
 
-  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!canSave) return;
 
     try {
@@ -109,6 +114,35 @@ export function LowStockPage() {
     }
   }
 
+  async function handleSaveHeadOffice(updatedItem: LowStockItem) {
+    try {
+      setModalSaving(true);
+      setError('');
+
+      const saved = await updateLowStockHeadOffice({
+        id: updatedItem.id,
+        name: updatedItem.name,
+        type: updatedItem.type,
+        ups: updatedItem.ups,
+        pcs: updatedItem.pcs,
+        stock: updatedItem.stock,
+        order: updatedItem.order,
+        remark: updatedItem.remark,
+        is_high_priority: updatedItem.is_high_priority,
+        manager_approval: updatedItem.manager_approval ?? 'pending',
+        manager_remarks: updatedItem.manager_remarks ?? '',
+      });
+
+      setItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      setSelectedItem(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update Head Office details.');
+      throw err;
+    } finally {
+      setModalSaving(false);
+    }
+  }
+
   return (
     <section className="dashboard-page">
       <div className="dashboard-hero">
@@ -116,7 +150,8 @@ export function LowStockPage() {
           <span className="eyebrow">Low stock</span>
           <h1>Track items that need ordering now.</h1>
           <p>
-            Name, type, up&apos;s, and pcs come from settings. Stock, order, and remark are entered directly here.
+            Name, type, up&apos;s, and pcs come from settings. Stock, order, and remark are entered
+            directly here.
           </p>
         </div>
 
@@ -150,7 +185,10 @@ export function LowStockPage() {
             <div className="low-stock-form-grid">
               <label>
                 <span>Name</span>
-                <select value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}>
+                <select
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                >
                   <option value="">Select name</option>
                   {names.map((item) => (
                     <option key={item.id} value={item.value}>
@@ -162,7 +200,10 @@ export function LowStockPage() {
 
               <label>
                 <span>Type</span>
-                <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                <select
+                  value={form.type}
+                  onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
+                >
                   <option value="">Select type</option>
                   {types.map((item) => (
                     <option key={item.id} value={item.value}>
@@ -174,7 +215,10 @@ export function LowStockPage() {
 
               <label>
                 <span>Up&apos;s</span>
-                <select value={form.ups} onChange={(e) => setForm((p) => ({ ...p, ups: e.target.value }))}>
+                <select
+                  value={form.ups}
+                  onChange={(event) => setForm((prev) => ({ ...prev, ups: event.target.value }))}
+                >
                   <option value="">Select up&apos;s</option>
                   {upsOptions.map((item) => (
                     <option key={item.id} value={item.value}>
@@ -186,7 +230,10 @@ export function LowStockPage() {
 
               <label>
                 <span>Pcs</span>
-                <select value={form.pcs} onChange={(e) => setForm((p) => ({ ...p, pcs: e.target.value }))}>
+                <select
+                  value={form.pcs}
+                  onChange={(event) => setForm((prev) => ({ ...prev, pcs: event.target.value }))}
+                >
                   <option value="">Select pcs</option>
                   {pcsOptions.map((item) => (
                     <option key={item.id} value={item.value}>
@@ -201,7 +248,7 @@ export function LowStockPage() {
                 <input
                   type="text"
                   value={form.stock}
-                  onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
+                  onChange={(event) => setForm((prev) => ({ ...prev, stock: event.target.value }))}
                   placeholder="Enter current stock"
                 />
               </label>
@@ -211,7 +258,7 @@ export function LowStockPage() {
                 <input
                   type="text"
                   value={form.order}
-                  onChange={(e) => setForm((p) => ({ ...p, order: e.target.value }))}
+                  onChange={(event) => setForm((prev) => ({ ...prev, order: event.target.value }))}
                   placeholder="Enter required order qty"
                 />
               </label>
@@ -220,7 +267,7 @@ export function LowStockPage() {
                 <span>Remark</span>
                 <textarea
                   value={form.remark}
-                  onChange={(e) => setForm((p) => ({ ...p, remark: e.target.value }))}
+                  onChange={(event) => setForm((prev) => ({ ...prev, remark: event.target.value }))}
                   placeholder="Enter remark"
                   rows={4}
                 />
@@ -231,7 +278,9 @@ export function LowStockPage() {
                 <input
                   type="checkbox"
                   checked={form.is_high_priority}
-                  onChange={(e) => setForm((p) => ({ ...p, is_high_priority: e.target.checked }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, is_high_priority: event.target.checked }))
+                  }
                 />
               </label>
             </div>
@@ -254,53 +303,74 @@ export function LowStockPage() {
             ) : items.length === 0 ? (
               <div className="hero-card">No currently low stock items saved yet.</div>
             ) : (
-                items.map((item) => (
-  <article
-    key={item.id}
-    className={item.is_high_priority ? 'low-stock-card high-priority' : 'low-stock-card'}
-  >
-    <div className="low-stock-card-head">
-      <h3>{item.name}</h3>
-      {item.is_high_priority ? <span className="priority-badge">High Priority</span> : null}
-    </div>
+              items.map((item) => (
+                <article
+                  key={item.id}
+                  className={item.is_high_priority ? 'low-stock-card high-priority' : 'low-stock-card'}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedItem(item);
+                    }
+                  }}
+                >
+                  <div className="low-stock-card-head">
+                    <h3>{item.name}</h3>
+                    {item.is_high_priority ? (
+                      <span className="priority-badge">High Priority</span>
+                    ) : null}
+                  </div>
 
-    <div className="low-stock-card-grid">
-      <div>
-        <span>#ID</span>
-        <strong>{item.display_id}</strong>
-      </div>
+                  <div className="low-stock-card-grid">
+                    <div>
+                      <span>#ID</span>
+                      <strong>{item.display_id}</strong>
+                    </div>
 
-      <div>
-        <span>Name</span>
-        <strong>{item.name}</strong>
-      </div>
+                    <div>
+                      <span>Name</span>
+                      <strong>{item.name}</strong>
+                    </div>
 
-      <div>
-        <span>Type</span>
-        <strong>{item.type}</strong>
-      </div>
+                    <div>
+                      <span>Type</span>
+                      <strong>{item.type}</strong>
+                    </div>
 
-      <div>
-        <span>Pcs</span>
-        <strong>{item.pcs}</strong>
-      </div>
+                    <div>
+                      <span>Pcs</span>
+                      <strong>{item.pcs}</strong>
+                    </div>
 
-      <div>
-        <span>Stock / Order</span>
-        <strong>{item.stock} / {item.order}</strong>
-      </div>
+                    <div>
+                      <span>Stock / Order</span>
+                      <strong>
+                        {item.stock} / {item.order}
+                      </strong>
+                    </div>
 
-      <div>
-        <span>Added By</span>
-        <strong>{item.created_by}</strong>
-      </div>
-    </div>
-  </article>
-))
+                    <div>
+                      <span>Added By</span>
+                      <strong>{item.created_by}</strong>
+                    </div>
+                  </div>
+                </article>
+              ))
             )}
           </div>
         </div>
       ) : null}
+
+      <LowStockWorkflowModal
+        open={Boolean(selectedItem)}
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onSaveHeadOffice={handleSaveHeadOffice}
+        saving={modalSaving}
+      />
     </section>
   );
 }

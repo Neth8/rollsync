@@ -5,6 +5,8 @@ export type DropdownOption = {
   value: string;
 };
 
+export type ApprovalStatus = 'approved' | 'pending' | 'rejected';
+
 export type LowStockItem = {
   id: string;
   display_id: string;
@@ -18,6 +20,8 @@ export type LowStockItem = {
   is_high_priority: boolean;
   created_at: string;
   created_by: string;
+  manager_approval: ApprovalStatus | null;
+  manager_remarks: string | null;
 };
 
 const dropdownTables = {
@@ -67,7 +71,9 @@ export async function getLowStockItems() {
       remark,
       is_high_priority,
       created_at,
-      created_by
+      created_by,
+      manager_approval,
+      manager_remarks
     `)
     .order('is_high_priority', { ascending: false })
     .order('created_at', { ascending: false });
@@ -79,6 +85,7 @@ export async function getLowStockItems() {
 
   return (data ?? []) as LowStockItem[];
 }
+
 export async function createLowStockItem(payload: {
   name: string;
   type: string;
@@ -94,7 +101,14 @@ export async function createLowStockItem(payload: {
 
   const { data, error } = await supabase
     .from('rollsync_low_stock_items')
-    .insert([{ ...payload, created_by: userId }])
+    .insert([
+      {
+        ...payload,
+        created_by: userId,
+        manager_approval: 'pending',
+        manager_remarks: '',
+      },
+    ])
     .select(`
       id,
       display_id,
@@ -107,12 +121,68 @@ export async function createLowStockItem(payload: {
       remark,
       is_high_priority,
       created_at,
-      created_by
+      created_by,
+      manager_approval,
+      manager_remarks
     `)
     .single();
 
   if (error) {
     console.error('createLowStockItem error:', error);
+    throw error;
+  }
+
+  return data as LowStockItem;
+}
+
+export async function updateLowStockHeadOffice(payload: {
+  id: string;
+  name: string;
+  type: string;
+  ups: string;
+  pcs: string;
+  stock: string;
+  order: string;
+  remark: string;
+  is_high_priority: boolean;
+  manager_approval: ApprovalStatus;
+  manager_remarks: string;
+}) {
+  const { data, error } = await supabase
+    .from('rollsync_low_stock_items')
+    .update({
+      name: payload.name,
+      type: payload.type,
+      ups: payload.ups,
+      pcs: payload.pcs,
+      stock: payload.stock,
+      order: payload.order,
+      remark: payload.remark,
+      is_high_priority: payload.is_high_priority,
+      manager_approval: payload.manager_approval,
+      manager_remarks: payload.manager_remarks,
+    })
+    .eq('id', payload.id)
+    .select(`
+      id,
+      display_id,
+      name,
+      type,
+      ups,
+      pcs,
+      stock,
+      order,
+      remark,
+      is_high_priority,
+      created_at,
+      created_by,
+      manager_approval,
+      manager_remarks
+    `)
+    .single();
+
+  if (error) {
+    console.error('updateLowStockHeadOffice error:', error);
     throw error;
   }
 
