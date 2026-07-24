@@ -111,7 +111,7 @@ export function DashboardPage() {
           </div>
 
           <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="99%" height="100%">
               <LineChart data={monthlyOrders}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" stroke="var(--muted)" />
@@ -256,8 +256,13 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="dashboard-table-wrap">
-          <table className="dashboard-table">
+<div
+  className="dashboard-table-wrap"
+  role="region"
+  aria-label="Low stock preview table"
+  tabIndex={0}
+>
+  <table className="dashboard-table">
             <caption className="sr-only">Low stock preview items</caption>
             <thead>
               <tr>
